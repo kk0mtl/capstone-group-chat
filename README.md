@@ -10,7 +10,7 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 - Socket.io
 - [Syled-components](https://styled-components.com/)
 - [Simple-peer](https://github.com/feross/simple-peer)
-- Server-deploy : ngrok
+- Server-deploy : ngrok, AWS
 
 **Contributors:** [Hyunse Kim](https://github.com/Hyunse/video-group-meeting)
 
@@ -68,12 +68,12 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 
 ## Todo 🔨🔨🔨
 
-- [x] 화상 플랫폼 구현
+- [ ] 화상 플랫폼 구현
 - [x] 실시간 자막
-- [x] Dialog 창
-- [x] 실시간 회의록
+- [ ] Dialog 창
+- [ ] 실시간 회의록
 - [x] 실시간 워드 클라우드
-- [x] 회의록 다운로드
+- [ ] 회의록 다운로드
 
 ## License
 [MIT License](./LICENSE)
