@@ -12,7 +12,7 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 - [Simple-peer](https://github.com/feross/simple-peer)
 - Server-deploy : ngrok
 
-**Contributors:** [Hyunse Kim](https://github.com/Hyunse)
+**Contributors:** [Hyunse Kim](https://github.com/Hyunse/video-group-meeting)
 
 ---
 
@@ -26,7 +26,7 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 
 ## Installation
 ### Clone
-- Clone this repo to your local machine using `git clone https://github.com/Jnayoung/capstone.git ./`
+- Clone this repo to your local machine
 
 ### Setup
 **Client**
@@ -62,6 +62,9 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
     ngrok http 3000 --host-header="localhost:3000"
   </code>
 </pre>
+
+**Flask server**
+> Flask server is deployed on AWS with EC2's ALB, Route53, ACM.
 
 ## Todo 🔨🔨🔨
 
