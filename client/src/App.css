@@ -1,0 +1,57 @@
+.App {
+  text-align: center;
+
+  background-color: #454552;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+@font-face {
+  font-family: NunitoExtraLight;
+  src: url("./fonts/Nunito-ExtraLight.woff");
+}
+
+@font-face {
+  font-family: NunitoLight;
+  src: url("./fonts/Nunito-Light.woff");
+}
+
+@font-face {
+  font-family: NunitoRegular;
+  src: url("./fonts/Nunito-Regular.woff");
+}
+
+@font-face {
+  font-family: NunitoMedium;
+  src: url("./fonts/Nunito-Medium.woff");
+}
+
+@font-face {
+  font-family: NunitoSemiBold;
+  src: url("./fonts/Nunito-SemiBold.woff");
+}
+
+@font-face {
+  font-family: NunitoBold;
+  src: url("./fonts/Nunito-Bold.woff");
+}
+
+@font-face {
+  font-family: NunitoExtraBold;
+  src: url("./fonts/Nunito-ExtraBold.woff");
+}
+
+@font-face {
+  font-family: NunitoBlack;
+  src: url("./fonts/Nunito-Black.woff");
+}
+
+@font-face {
+  font-family: JuaRegular;
+  src: url("./fonts/Jua-Regular.woff");
+}
