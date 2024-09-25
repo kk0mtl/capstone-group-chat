@@ -4,6 +4,8 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 
 **Technologies Used**
 
+- ChatGPT 4o mini
+- Dall.E
 - React
 - Node + Express
 - WebRTC
@@ -69,11 +71,12 @@ Videe-Group-Meeting is a simple video chat application for multi-users based on 
 ## Todo 🔨🔨🔨
 
 - [x] 화상 플랫폼 구현
-- [ ] 실시간 자막
 - [x] Dialog 창
 - [x] 실시간 회의록
-- [ ] 실시간 워드 클라우드
-- [x] 회의록 다운로드
+- [ ] LLM + RAG 
+- [ ] 협업 문서 툴
+- [x] WordCloud
+- [ ] 회의록 다운로드
 
 ## License
 [MIT License](./LICENSE)
