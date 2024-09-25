@@ -23,39 +23,32 @@ const Room = (props) => {
   const screenTrackRef = useRef();
   const userStream = useRef();
   const roomId = props.match.params.roomId;
-
   const stt = useRef(null);
 
   useEffect(() => {
-    // Get Video Devices
+    const currentUser = sessionStorage.getItem("user") || props.currentUser;  // 새로고침 시 사용자 정보를 세션 스토리지에서 가져옵니다.
+    const savedRoomId = sessionStorage.getItem("roomId");  // 방 정보도 세션 스토리지에서 가져옵니다.
+
+    // 세션 스토리지에 방 ID와 사용자 정보를 저장 (최초 실행 시)
+    sessionStorage.setItem("roomId", roomId);
+    sessionStorage.setItem("user", currentUser);
+
+    // 비디오 장치 가져오기
     navigator.mediaDevices.enumerateDevices().then((devices) => {
       const filtered = devices.filter((device) => device.kind === "videoinput");
       setVideoDevices(filtered);
     });
 
-    // Set Back Button Event
-    //window.addEventListener("popstate", goToBack);
-
-    // Connect Camera & Mic
+    // 유저 미디어 가져오기 및 STT 설정
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
         userVideoRef.current.srcObject = stream;
         userStream.current = stream;
-        //stt.start();
 
-        // STT 초기화 ============================================
         stt.current = new STT({
           continuous: true,
           interimResults: true,
-        });
-
-        stt.current.on("start", () => {
-          console.log("start :>> ");
-        });
-
-        stt.current.on("end", () => {
-          console.log("end :>> ");
         });
 
         stt.current.on("result", handleSTTResult);
@@ -71,22 +64,33 @@ const Room = (props) => {
           }
         });
 
-        // 오디오가 활성화 상태일 때 stt 실행
-        if (userStream.current.getAudioTracks()[0].enabled) {
+        // 오디오 트랙이 활성화되어 있는 경우 STT 시작
+        if (userStream.current.getAudioTracks()[0] && userStream.current.getAudioTracks()[0].enabled) {
           startSTT();
         }
-        // STT 초기화 ============================================
 
-        socket.emit("BE-join-room", { roomId, userName: currentUser });
+        // 새로고침 시 세션 스토리지에 저장된 정보를 이용해 자동 재연결
+        if (savedRoomId) {
+          socket.emit("BE-join-room", { roomId: savedRoomId, userName: currentUser });
+        } else {
+          socket.emit("BE-join-room", { roomId, userName: currentUser });
+        }
+
+        // 방에 참여한 사용자 정보를 받아 처리
         socket.on("FE-user-join", (users) => {
-          // all users
           const peers = [];
+
           users.forEach(({ userId, info }) => {
+
+            console.log("Currently connected peers:");
+            peersRef.current.forEach(({ peerID, userName, peer }) => {
+              console.log(`Username: ${userName}, Peer Object:`, peer);
+            });
+
             let { userName, video, audio } = info;
 
             if (userName !== currentUser) {
               const peer = createPeer(userId, socket.id, stream);
-
               peer.userName = userName;
               peer.peerID = userId;
 
@@ -108,6 +112,7 @@ const Room = (props) => {
           setPeers(peers);
         });
 
+        // 호출을 수신했을 때 처리
         socket.on("FE-receive-call", ({ signal, from, info }) => {
           let { userName, video, audio } = info;
           const peerIdx = findPeer(from);
@@ -134,11 +139,13 @@ const Room = (props) => {
           }
         });
 
+        // 호출 수락 처리
         socket.on("FE-call-accepted", ({ signal, answerId }) => {
           const peerIdx = findPeer(answerId);
           peerIdx.peer.signal(signal);
         });
 
+        // 사용자가 방을 떠날 때 처리
         socket.on("FE-user-leave", ({ userId, userName }) => {
           const peerIdx = findPeer(userId);
           peerIdx.peer.destroy();
@@ -150,33 +157,36 @@ const Room = (props) => {
             ({ peerID }) => peerID !== userId
           );
         });
+
       });
-
-    socket.on("FE-toggle-camera", ({ userId, switchTarget }) => {
-      const peerIdx = findPeer(userId);
-
-      setUserVideoAudio((preList) => {
-        let video = preList[peerIdx.userName].video;
-        let audio = preList[peerIdx.userName].audio;
-
-        if (switchTarget === "video") video = !video;
-        else audio = !audio;
-
-        return {
-          ...preList,
-          [peerIdx.userName]: { video, audio },
-        };
-      });
-    });
 
     return () => {
-      socket.disconnect();
-      stopSTT();
+      cleanUpPeers();
+      socket.disconnect(); // 소켓 연결 해제
+      stopSTT(); // STT 리소스 정리
     };
-    // eslint-disable-next-line
-  }, []);
+  }, [roomId, props.currentUser]); // roomId와 props.currentUser가 변경될 때마다 실행
+
+  const cleanUpPeers = () => {
+    peersRef.current.forEach(({ peer }) => {
+      peer.destroy(); // Peer 연결 해제
+    });
+    peersRef.current = []; // Peer 목록 초기화
+
+    // 로컬 스트림 정리
+    if (userStream.current) {
+      userStream.current.getTracks().forEach(track => track.stop());
+    }
+    setPeers([]); // 화면에 표시된 Peer 초기화
+  };
 
   function createPeer(userId, caller, stream) {
+    const existingPeer = findPeer(userId);
+    if (existingPeer) {
+      existingPeer.peer.destroy(); // 기존 Peer가 있으면 제거
+      peersRef.current = peersRef.current.filter(({ peerID }) => peerID !== userId);
+    }
+
     const peer = new Peer({
       initiator: true,
       trickle: false,
@@ -189,9 +199,6 @@ const Room = (props) => {
         from: caller,
         signal,
       });
-    });
-    peer.on("disconnect", () => {
-      peer.destroy();
     });
 
     return peer;
@@ -206,10 +213,6 @@ const Room = (props) => {
 
     peer.on("signal", (signal) => {
       socket.emit("BE-accept-call", { signal, to: callerId });
-    });
-
-    peer.on("disconnect", () => {
-      peer.destroy();
     });
 
     peer.signal(incomingSignal);
@@ -245,33 +248,34 @@ const Room = (props) => {
     }
   }
 
-  //Before
-
-  // StopButton
-  // const goToBack = (e) => {
-  //   e.preventDefault();
-  //   socket.emit("BE-leave-room", { roomId, leaver: currentUser });
-  //   sessionStorage.removeItem("user");
-  //   window.location.href = `result/${roomId}`;
-  // };
-
   //After
   const history = useHistory();
 
   const handleStop = () => {
-    // 다른 필요한 로직을 추가할 수 있습니다.
-    console.log("Stopping the session and navigating to Result page...");
+    socket.emit("BE-leave-room", { roomId, leaver: currentUser });
+
+    if (userStream.current) {
+      userStream.current.getTracks().forEach(track => track.stop());
+    }
+
+    peersRef.current.forEach(({ peer }) => {
+      peer.destroy();
+    });
+    setPeers([]); // peers 상태 초기화
+
+    // 세션 스토리지에서 방 정보 삭제
+    sessionStorage.removeItem("roomId");
+    sessionStorage.removeItem("user");
+
     history.push(`/result/${roomId}`);
   };
 
-  // ==============================STT=======================================
   const [finalScript, setFinalScript] = useState("");
   const [previousFinalScript, setPreviousFinalScript] = useState("");
-  const [interimScript, setinterimScript] = useState("");
+  const [interimScript, setInterimScript] = useState("");
 
   const handleSTTResult = ({ finalTranscript, interimTranscript }) => {
-    console.log("result :>> ", finalTranscript, interimTranscript);
-    setinterimScript(interimTranscript);
+    setInterimScript(interimTranscript);
     setFinalScript(finalTranscript);
   };
 
@@ -279,29 +283,18 @@ const Room = (props) => {
     if (finalScript !== "" && finalScript !== previousFinalScript) {
       socket.emit("BE-stt-data-out", {
         roomId,
-        ssender: currentUser,
-        smsg: finalScript,
+        sender: currentUser,
+        msg: finalScript,
         prev: previousFinalScript,
         timestamp: new Date().toISOString(),
       });
       setPreviousFinalScript(finalScript);
-      console.log(finalScript);
       setFinalScript("");
     }
   }, [finalScript, currentUser, roomId]);
 
-  const [getSub, setGetSub] = useState("");
-
-  useEffect(() => {
-    socket.on("FE-stt-sender", ({ ssender, smsg }) => {
-      setGetSub((msgs) => [...msgs, { ssender, smsg }]);
-      console.log("get >>", ssender, smsg);
-    });
-  }, []);
-
   const startSTT = () => {
-    if (stt.current) {
-      stopSTT();  // stt가 실행중이면 종료하고 다시 시작 
+    if (stt.current && !stt.current.getIsRecognizing()) {
       try {
         stt.current.start();
       } catch (error) {
@@ -320,45 +313,35 @@ const Room = (props) => {
     }
   };
 
-  // ==============================STT=======================================
-
   const toggleCameraAudio = (e) => {
     const target = e.target.getAttribute("data-switch");
+    if (userVideoRef.current && userVideoRef.current.srcObject) {
+      let videoSwitch = userVideoAudio["localUser"].video;
+      let audioSwitch = userVideoAudio["localUser"].audio;
 
-    setUserVideoAudio((preList) => {
-      let videoSwitch = preList["localUser"].video;
-      let audioSwitch = preList["localUser"].audio;
-      console.log(audioSwitch);
-
-      if (target === "video") {
-        const userVideoTrack =
-          userVideoRef.current.srcObject.getVideoTracks()[0];
+      if (target === "video" && userVideoRef.current.srcObject.getVideoTracks().length > 0) {
+        const userVideoTrack = userVideoRef.current.srcObject.getVideoTracks()[0];
         videoSwitch = !videoSwitch;
         userVideoTrack.enabled = videoSwitch;
-      } else {
-        const userAudioTrack =
-          userVideoRef.current.srcObject.getAudioTracks()[0];
+      } else if (target === "audio" && userVideoRef.current.srcObject.getAudioTracks().length > 0) {
+        const userAudioTrack = userVideoRef.current.srcObject.getAudioTracks()[0];
         audioSwitch = !audioSwitch;
-
-        if (userAudioTrack) {
-          userAudioTrack.enabled = audioSwitch;
-        } else {
-          userStream.current.getAudioTracks()[0].enabled = audioSwitch;
-        }
+        userAudioTrack.enabled = audioSwitch;
       }
 
-      // 마이크 상태에 따라 stt 활성/비활성
       if (audioSwitch) {
         startSTT();
       } else {
         stopSTT();
       }
 
-      return {
-        ...preList,
-        localUser: { video: videoSwitch, audio: audioSwitch },
-      };
-    });
+      setUserVideoAudio((preList) => {
+        return {
+          ...preList,
+          localUser: { video: videoSwitch, audio: audioSwitch },
+        };
+      });
+    }
     socket.emit("BE-toggle-camera-audio", { roomId, switchTarget: target });
   };
 

@@ -10,6 +10,9 @@ const VideoCard = (props) => {
     });
     peer.on('track', (track, stream) => {
     });
+    return () => {
+      peer.removeAllListeners('stream'); // 이벤트 리스너 제거
+    };
   }, [peer]);
 
   return (

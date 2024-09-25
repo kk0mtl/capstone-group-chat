@@ -12,7 +12,7 @@ const Dialog = ({ display }) => {
   const [time, setTime] = useState(""); // 회의 시간
   const [isLoading, setIsLoading] = useState(false); // 로딩 상태
 
-  const hostIP = 'capstonesmugroupchat.click';
+  const hostIP = 'capstonesmugroupchat.click/gpt';
 
   useEffect(() => {
     // 소켓 이벤트 리스너 설정

@@ -13,7 +13,7 @@ const { timeStamp } = require('console');
 let socketList = {};
 
 // DB
-const DB_URL = "mongodb+srv://njeon671:7mvEjoODB3B40U1J@cluster0.kjw1zru.mongodb.net/";
+const DB_URL = "mongodb+srv://Capstone:caps0123@capstonedb.oqpu0.mongodb.net/?retryWrites=true&w=majority&appName=CapstoneDb";
 
 mongoose
   .connect(DB_URL)
@@ -87,6 +87,13 @@ io.on('connection', (socket) => {
           // Add User List
           users.push({ userId: client, info: socketList[client] });
         });
+
+        // 서버 콘솔에 접속한 모든 사용자 출력
+        console.log(`Users in room ${roomId}:`);
+        users.forEach((user) => {
+          console.log(`User ID: ${user.userId}, Username: ${user.info.userName}`);
+        });
+
         socket.broadcast.to(roomId).emit('FE-user-join', users);
         // io.sockets.in(roomId).emit('FE-user-join', users);
       } catch (e) {

@@ -14,8 +14,8 @@ const Result = (props) => {
     });
 
     const [wordCloudImage, setWordCloudImage] = useState(null);
-    const shostIP = 'capstonesmugroupchat.click';   //summary
-    const whostIP = 'wordcloud.click';  //wordcloud
+    const shostIP = 'capstonesmugroupchat.click/gpt';   //summary
+    const whostIP = 'capstonesmugroupchat.click./wc';  //wordcloud
 
     useEffect(() => {
         // fetch summary data
@@ -26,7 +26,7 @@ const Result = (props) => {
             },
         })
             .then(response => {
-                console.log("Received response from /summarize:", response);
+                console.log("Received response from /wc/summarize:", response);
                 return response.json();
             })
             .then(data => {
